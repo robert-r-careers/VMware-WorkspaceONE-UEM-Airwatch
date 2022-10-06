@@ -1,0 +1,60 @@
+# set-psdebug -Trace 1
+############################################################################################################
+# Airwatch UEM Admin Console - Powershell Script to a Delete Device from the UEM via RestAPI 
+# Created: 10/06/2022 by Robert Rosiles 
+# Last Updated: 10/6/2022 by Robert Rosiles
+# -----------------------------------------------------------------------------------------------------------
+# This script generates the DELETE Method RestAPI call to remove a device from the Airwatch UEM by
+# Prompts Admin for (x2) device identify numbers/ID's 
+# Isolates device ID by modifying the "{searchby}&id={id}" in the URL portion of the $devIDapi variable
+# Serial number & ID example: "https://cnXXXX.awmdm.com/api/mdm/devices?searchby={PXZNFRFNG0NC}&id={1562}"
+# Complies Clinet oAUTH Headers and DELETE Method RestAPI CURL command
+# -----------------------------------------------------------------------------------------------------------
+# Raw CURL command example:
+# # curl -X DELETE --header 'Accept: application/json' --header 'Authorization: Basic <number from your Airwatch UEM settings>' --header 'aw-tenant-code: <number from your Airwatch UEM settings>' 'https://cnXXXX.1916.awmdm.com/api/mdm/devices?searchby={searchby}&id={id}'
+############################################################################################################
+# IF NECESSARY, EDIT BELOW THIS LINE
+############################################################################################################
+# Airwatch UEM Admin Conosle Information for Client & oAuth headers
+$apiHost = 'https://cnXXXX.awmdm.com/api'
+$apiKey = 'retrieve this number from your Airwatch UEM settings'
+$tokenUrl = 'https://na.uemauth.vmwservices.com/connect/token'
+$clientId = 'retrieve this number from your Airwatch UEM settings'
+$clientSecret = 'retrieve this number from your Airwtach UEM settings'
+# prompts Admin for Device Identifying Information and creates varibles "$serachby" & "$devID"
+$searchby = Read-Host -Prompt "Enter one of the following device identifying numbers: Macaddress, Udid, Serial Number, ImeiNumber"
+$devID = Read-Host -Prompt "Enter the Device ID of the device you want to delete"
+############################################################################################################
+# DO NOT EDIT BELOW THIS LINE 
+############################################################################################################
+#Varibles "$serachby" & "$devID" modify the below varible "$devIDapiurl" URL with target device ID info   
+$devIDapiurl = "https://cnXXXX.awmdm.com/api/mdm/devices?searchby={$searchby}&id={$devID}"
+# RestAPI Method to use
+$restMETHOD = "DELETE"
+# Retrieves access token and compiles client ID authorization headers for DELETE Device API CURL command
+$headers = @{
+    'Content-Type' = 'application/x-www-form-urlencoded'
+}
+$body = @{
+	'client_id' = $clientID
+	'client_secret' = $clientSecret
+	'grant_type' = "client_credentials"
+}
+try {
+    $response = Invoke-RestMethod $tokenUrl -Method $restMETHOD -Headers $headers -Body $body
+    $token = $response.access_token
+    $authorizationHeader = "Bearer ${token}"
+} catch {
+    Write-Error $_.Exception.Message
+}
+$headers = @{
+    'Accept' = 'application/json;version=2'
+    'Authorization' = $authorizationHeader
+    'aw-tenant-code' = $apiKey
+}
+try {
+    $Response = Invoke-RestMethod -URI $devIDapiurl -Method $restMETHOD -Headers $headers
+    Write-Host $Response
+} catch {
+    Write-Error $_.Exception.Message
+}
